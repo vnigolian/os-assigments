@@ -3,6 +3,9 @@
 #include <linux/types.h>
 #include <linux/spinlock.h>
 #include <asm/uaccess.h>
+#include <linux/sched.h>
+#include <linux/list.h>
+#include <linux/slab.h>
 
 asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_children){
 	if(!access_ok(pid_t*,list, sizeof(pid_t)) 
@@ -11,29 +14,32 @@ asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_childr
 	}else if(list == NULL && !limit == 0){
 		return -EFAULT;
 	}else{
-		pid_t* pPids;
+		pid_t* pPids = kmalloc(limit * sizeof(pid_t), GFP_KERNEL);
 		size_t num_child = 0;
-		
-		task_struct* p_childptr = current-> p_cptr;
-		size_t i = 0;
-		while(p_childptr != NULL){
-			*(pPids + num_child) = p_childptr->pid;
-			p_childptr = p_childptr->p_osptr;
-			num_child++;
-		}
-		
-		put_user(pNum,num_child);
-		
-		if(limit >= num_child){
-			for(i=0;i<num_child;i++){
-				put_user(*(pPids + i), list + i);
+		if(pPids != NULL){
+			struct list_head* cursor; 
+			list_for_each(cursor, &(current->children)){
+				num_child++;
 			}
-		return 0;
+		
+			put_user(num_child,num_children);
+			
+			if(limit >= num_child){
+				int i = 0;
+				for(i=0;i<num_child;i++){
+					put_user(*(pPids + i), list + i);
+				}
+			return 0;
+			}else{
+				int i = 0;
+				for(i=0;i<limit;i++){
+					put_user(*(pPids + i), list + i);
+				}
+			return -ENOBUFS;
+			}
+			kfree(pPids);
 		}else{
-			for(i=0;i<limit;i++){
-				put_user(*(pPids + i), list + i);
-			}
-		return -ENOBUFS;
+			return -EFAULT;
 		}
 	}
 }
