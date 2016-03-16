@@ -9,7 +9,7 @@
 
 asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_children){
 	if(!access_ok(pid_t*,list, sizeof(pid_t)) 
-	|| !access_ok(size_t*, num_children, sizeof(num_children))){
+	|| !access_ok(size_t*, num_children, sizeof(size_t))){ //size_t is the type to measure
 		return -EFAULT;
 	}else if(list == NULL && !limit == 0){
 		return -EFAULT;
@@ -37,7 +37,7 @@ asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_childr
 				}
 			return -ENOBUFS;
 			}
-			kfree(pPids);
+			//kfree(pPids);   //if you free here it won't be possible to be read
 		}else{
 			return -EFAULT;
 		}
