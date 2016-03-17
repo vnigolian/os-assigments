@@ -16,7 +16,9 @@ asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_childr
 	}else{
 		size_t num_child = 0;
 		
-		struct list_head* cursor; 
+		read_lock(&tasklist_lock);
+		
+		struct list_head* cursor = &(current->children); 
 		list_for_each(cursor, &(current->children)){
 			num_child++;
 		}
@@ -28,6 +30,8 @@ asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_childr
 			pPids[i] = list_entry(cursor,struct task_struct, sibling) -> pid;
 			i++;
 		}
+		
+		read_unlock(&tasklist_lock);
 			
 			//printk("get_child_pids syscall : This process has %u children\n",num_child);			
 			put_user(num_child,num_children);
