@@ -9,38 +9,41 @@
 
 asmlinkage long sys_get_child_pids(pid_t* list, size_t limit, size_t* num_children){
 	if(!access_ok(pid_t*,list, sizeof(pid_t)) 
-	|| !access_ok(size_t*, num_children, sizeof(num_children))){
+	|| !access_ok(size_t*, num_children, sizeof(size_t))){
 		return -EFAULT;
 	}else if(list == NULL && !limit == 0){
 		return -EFAULT;
 	}else{
-		pid_t* pPids = kmalloc(limit * sizeof(pid_t), GFP_KERNEL);
 		size_t num_child = 0;
-		if(pPids != NULL){
-			struct list_head* cursor; 
-			list_for_each(cursor, &(current->children)){
-				num_child++;
-			}
 		
-			put_user(num_child,num_children);
+		struct list_head* cursor; 
+		list_for_each(cursor, &(current->children)){
+			num_child++;
+		}
+		
+		pid_t pPids[num_child];
 			
+		size_t i = 0;
+		list_for_each(cursor, &(current->children)){
+			pPids[i] = list_entry(cursor,struct task_struct, sibling) -> pid;
+			i++;
+		}
+			
+			//printk("get_child_pids syscall : This process has %u children\n",num_child);			
+			put_user(num_child,num_children);
+
 			if(limit >= num_child){
-				int i = 0;
+			//printk("get_child_pids syscall : limit >= num_child\n");			
 				for(i=0;i<num_child;i++){
 					put_user(*(pPids + i), list + i);
 				}
 			return 0;
 			}else{
-				int i = 0;
+			//printk("get_child_pids syscall : limit < num_child\n");			
 				for(i=0;i<limit;i++){
 					put_user(*(pPids + i), list + i);
 				}
 			return -ENOBUFS;
 			}
-			kfree(pPids);
-		}else{
-			return -EFAULT;
-		}
 	}
 }
-
